@@ -31,20 +31,24 @@ typedef struct range_info_s {
 	uint32_t src_ip;	/**< Source starting IP address */
 	uint32_t src_ip_min;	/**< Source IP minimum */
 	uint32_t src_ip_max;	/**< Source IP maximum */
+    uint16_t src_ip_mode; 
 
 	uint32_t dst_ip;	/**< Destination starting IP address */
 	uint32_t dst_ip_min;	/**< Destination minimum IP address */
 	uint32_t dst_ip_max;	/**< Destination maximum IP address */
+    uint16_t dst_ip_mode; 
 
 	uint16_t ip_proto;	/**< IP Protocol type TCP or UDP */
 
 	uint16_t src_port;	/**< Source port starting */
 	uint16_t src_port_min;	/**< Source port minimum */
 	uint16_t src_port_max;	/**< Source port maximum */
+    uint16_t src_port_mode;
 
 	uint16_t dst_port;	/**< Destination port starting */
 	uint16_t dst_port_min;	/**< Destination port minimum */
 	uint16_t dst_port_max;	/**< Destination port maximum */
+    uint16_t dst_port_mode;
 
 	uint16_t vlan_id;	/**< VLAN id starting */
 	uint16_t vlan_id_min;	/**< VLAN id minimum */
@@ -65,15 +69,19 @@ typedef struct range_info_s {
 	uint64_t dst_mac;	/**< Destination starting MAC address */
 	uint64_t dst_mac_min;	/**< Destination minimum MAC address */
 	uint64_t dst_mac_max;	/**< Destination maximum MAC address */
+    uint16_t dst_mac_mode;
 
 	uint64_t src_mac;	/**< Source starting MAC address */
 	uint64_t src_mac_min;	/**< Source minimum MAC address */
 	uint64_t src_mac_max;	/**< Source maximum MAC address */
+    uint16_t src_mac_mode;
 
 	uint32_t gtpu_teid;	/**< GTP-U TEID starting */
 	uint32_t gtpu_teid_inc;	/**< GTP-U TEID inc */
 	uint32_t gtpu_teid_min;	/**< GTP-U TEID minimum */
 	uint32_t gtpu_teid_max;	/**< GTP-U TEID maximum */
+
+    uint16_t modify_pcap; /**PKT User-define Modify**/
 } range_info_t;
 
 struct port_info_s;

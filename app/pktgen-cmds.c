@@ -2804,6 +2804,8 @@ range_set_dst_ip(port_info_t *info, char *what, struct pg_ipaddr *ip)
 		info->range.dst_ip_inc = ntohl(ip->ipv4.s_addr);
 	else if (!strcmp(what, "start") )
 		info->range.dst_ip = ntohl(ip->ipv4.s_addr);
+	else if (!strcmp(what, "mode") )
+		info->range.dst_ip_mode = ntohl(ip->ipv4.s_addr);
 }
 
 /**************************************************************************//**
@@ -2832,6 +2834,8 @@ range_set_src_port(port_info_t *info, char *what, uint16_t port)
 			info->range.src_port_max = port;
 		else if (!strcmp(what, "start") )
 			info->range.src_port = port;
+		else if (!strcmp(what, "mode") )
+			info->range.src_port_mode = port;
 	}
 }
 
@@ -2891,6 +2895,8 @@ range_set_dst_port(port_info_t *info, char *what, uint16_t port)
 			info->range.dst_port_max = port;
 		else if (!strcmp(what, "start") )
 			info->range.dst_port = port;
+		else if (!strcmp(what, "mode") )
+			info->range.dst_port_mode = port;
 	}
 }
 

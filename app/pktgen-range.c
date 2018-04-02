@@ -142,8 +142,6 @@ pktgen_range_ctor(range_info_t *range, pkt_seq_t *pkt)
 			} else
 				pkt->tos = range->tos;
 
-
-
 			if (unlikely(range->pkt_size_inc != 0)) {
 				uint32_t p = pkt->pktSize;
 				p += range->pkt_size_inc;
@@ -209,6 +207,18 @@ pktgen_range_ctor(range_info_t *range, pkt_seq_t *pkt)
 	}
 }
 
+static const char* get_status(uint16_t code)
+{
+    if (code == 1)
+        return "fixed";
+    else if (code == 2)
+        return "increase";
+    else if (code == 3)
+        return "random";
+
+    return "off";
+}
+
 /**************************************************************************//**
  *
  * pktgen_print_range - Display the range data page.
@@ -220,7 +230,6 @@ pktgen_range_ctor(range_info_t *range, pkt_seq_t *pkt)
  *
  * SEE ALSO:
  */
-
 static void
 pktgen_print_range(void)
 {
@@ -242,12 +251,14 @@ pktgen_print_range(void)
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    min");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    max");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "   mode");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "src.ip");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    min");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    max");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "   mode");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "ip_proto");
@@ -255,10 +266,15 @@ pktgen_print_range(void)
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "dst.port / inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "     min / max");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "          mode");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "src.port / inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "     min / max");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "          mode");
+
+	row++;
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "modify pcap switch");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "vlan.id / inc");
@@ -281,16 +297,19 @@ pktgen_print_range(void)
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    min");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    max");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "   mode");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "src.mac");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    min");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "    max");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "   mode");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "gtpu.teid / inc");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "      min / max");
+
 
 	/* Get the last location to use for the window starting row. */
 	pktgen.last_row = ++row;
@@ -332,6 +351,7 @@ pktgen_print_range(void)
 		               inet_ntop4(buff, sizeof(buff),
 		                          htonl(range->dst_ip_max),
 		                          0xFFFFFFFF));
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, get_status(range->dst_ip_mode));
 
 		row++;
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1,
@@ -350,6 +370,7 @@ pktgen_print_range(void)
 		               inet_ntop4(buff, sizeof(buff),
 		                          htonl(range->src_ip_max),
 		                          0xFFFFFFFF));
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, get_status(range->src_ip_mode));
 
 		row++;
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1,
@@ -368,6 +389,7 @@ pktgen_print_range(void)
 		         range->dst_port_min,
 		         range->dst_port_max);
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, str);
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, get_status(range->dst_port_mode));
 
 		row++;
 		snprintf(str,
@@ -382,6 +404,11 @@ pktgen_print_range(void)
 		         range->src_port_min,
 		         range->src_port_max);
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, str);
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, get_status(range->src_port_mode));
+
+		row++;
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, 
+                (range->modify_pcap == 1 ? "on" : "off"));
 
 		row++;
 		snprintf(str,
@@ -456,6 +483,7 @@ pktgen_print_range(void)
 		               inet_mtoa(buff, sizeof(buff),
 		                         inet_h64tom(range->dst_mac_max,
 		                                     &eaddr)));
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, get_status(range->dst_mac_mode));
 
 		row++;
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1,
@@ -473,6 +501,7 @@ pktgen_print_range(void)
 		               inet_mtoa(buff, sizeof(buff),
 		                         inet_h64tom(range->src_mac_max,
 		                                     &eaddr)));
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, get_status(range->src_mac_mode));
 
 		row++;
 		snprintf(str,
@@ -487,6 +516,7 @@ pktgen_print_range(void)
 		         range->gtpu_teid_min,
 		         range->gtpu_teid_max);
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, str);
+
 	}
 
 	pktgen.flags &= ~PRINT_LABELS_FLAG;
@@ -530,25 +560,29 @@ pktgen_range_setup(port_info_t *info)
 
 	range->dst_ip       = IPv4(192, 168, info->pid + 1, 1);
 	range->dst_ip_min   = IPv4(192, 168, info->pid + 1, 1);
-	range->dst_ip_max   = IPv4(192, 168, info->pid + 1, 254);
+	range->dst_ip_max   = IPv4(192, 168, 255 - info->pid, 254);
 	range->dst_ip_inc   = 0x00000001;
+    range->dst_ip_mode  = 0;
 
 	range->src_ip       = IPv4(192, 168, info->pid, 1);
 	range->src_ip_min   = IPv4(192, 168, info->pid, 1);
-	range->src_ip_max   = IPv4(192, 168, info->pid, 254);
+	range->src_ip_max   = IPv4(192, 168, 255 - info->pid, 254);
 	range->src_ip_inc   = 0x00000000;
+    range->src_ip_mode  = 0;
 
 	range->ip_proto     = PG_IPPROTO_TCP;
 
 	range->dst_port     = (info->pid << 8);
 	range->dst_port_inc = 0x0001;
-	range->dst_port_min = range->dst_port + 0;
-	range->dst_port_max = range->dst_port + 254;
+	range->dst_port_min = range->dst_port + 2048;
+	range->dst_port_max = 65535 - range->dst_port;
+    range->dst_port_mode = 0;
 
 	range->src_port     = (info->pid << 8);
 	range->src_port_inc = 0x0001;
-	range->src_port_min = range->src_port + 0;
-	range->src_port_max = range->src_port + 254;
+	range->src_port_min = range->src_port + 1024;
+	range->src_port_max = 65535 - range->src_port;
+    range->src_port_mode = 0;
 
 	range->vlan_id      = info->vlanid;
 	range->vlan_id_inc  = 0;
@@ -570,15 +604,19 @@ pktgen_range_setup(port_info_t *info)
 	range->pkt_size_min = MIN_PKT_SIZE;
 	range->pkt_size_max = MAX_PKT_SIZE;
 
+    range->modify_pcap = 0;
+
 	info->seq_pkt[RANGE_PKT].pktSize = MIN_PKT_SIZE;
 
-	inet_mtoh64(&info->seq_pkt[SINGLE_PKT].eth_dst_addr, &range->dst_mac);
-	memset(&range->dst_mac_inc, 0, sizeof(range->dst_mac_inc));
-	memset(&range->dst_mac_min, 0, sizeof(range->dst_mac_min));
-	memset(&range->dst_mac_max, 0, sizeof(range->dst_mac_max));
+    range->dst_mac = 152303566849; /* 00:23:76:00:00:01 */
+    range->dst_mac_min = 152303566849; /* 00:23:76:00:00:01 */
+    range->dst_mac_max = 152320344063; /* 00:23:76:ff:ff:ff */
+    range->dst_mac_inc = 1;
+    range->dst_mac_mode = 0;
 
-	inet_mtoh64(&info->seq_pkt[SINGLE_PKT].eth_src_addr, &range->src_mac);
-	memset(&range->src_mac_inc, 0, sizeof(range->src_mac_inc));
-	memset(&range->src_mac_min, 0, sizeof(range->src_mac_min));
-	memset(&range->src_mac_max, 0, sizeof(range->src_mac_max));
+    range->src_mac = 152572002305; /* 00:23:86:00:00:01 */
+    range->src_mac_min = 152572002305; /* 00:23:86:00:00:01 */
+    range->src_mac_max = 152588779519; /* 00:23:86:ff:ff:ff */
+    range->src_mac_inc = 1;
+    range->src_mac_mode = 0;
 }

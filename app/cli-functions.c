@@ -7,6 +7,7 @@
 /* Created 2017 by Keith Wiles @ intel.com */
 
 #include "cli-functions.h"
+#include "pktgen-comm.h"
 
 #include <stdio.h>
 #include <termios.h>
@@ -95,7 +96,7 @@ static const char *status_help[] = {
 	NULL
 };
 
-#define SMMI	"%|start|minimum|maximum|increment|min|max|inc"
+#define SMMI	"%|start|minimum|maximum|increment|mode|min|max|inc"
 static struct cli_map range_map[] = {
 	{ 20, "range %P dst mac "SMMI" %m" },
 	{ 21, "range %P src mac "SMMI" %m" },
@@ -121,22 +122,26 @@ static struct cli_map range_map[] = {
 	{ 161, "range %P cos %d %d %d %d" },
 	{ 170, "range %P tos "SMMI" %d" },
 	{ 171, "range %P tos %d %d %d %d" },
+	{ 200, "range %P pcap mode %d" },
     { -1, NULL }
 };
 
 static const char *range_help[] = {
 	"  -- Setup the packet range values --",
-	"   note: SMMI = start|min|max|inc (start, minimum, maximum, increment)",
+	"   note: SMMI = start|min|max|inc|mode (start, minimum, maximum, increment, mode)",
 	"range <portlist> src|dst mac <SMMI> <etheraddr> - Set destination/source MAC address",
 	"            e.g: range 0 src mac start 00:00:00:00:00:00",
 	"                 range 0 dst mac max 00:12:34:56:78:90",
 	"             or  range 0 src mac 00:00:00:00:00:00 00:00:00:00:00:00 00:12:34:56:78:90 00:00:00:01:01:01",
+    "                 range 0 dst mac mode [0,1,2,3] - Set source mac [0:None 1:Fixed 2:Increase 3:Random]",
 	"range <portlist> src|dst ip <SMMI> <ipaddr>   - Set source IP start address",
 	"            e.g: range 0 dst ip start 0.0.0.0",
 	"                 range 0 dst ip min 0.0.0.0",
 	"                 range 0 dst ip max 1.2.3.4",
 	"                 range 0 dst ip inc 0.0.1.0",
 	"             or  range 0 dst ip 0.0.0.0 0.0.0.0 1.2.3.4 0.0.1.0",
+    "                 range 0 dst ip mode [0,1,2,3] - Set dest mac [0:None 1:Fixed 2:Increase 3:Random]",
+	"range <portlist> pcap mode [0, 1]             - Set modify-pcap mode",
 	"range <portlist> proto tcp|udp                - Set the IP protocol type",
 	"range <portlist> src|dst port <SMMI> <value>  - Set UDP/TCP source/dest port number",
 	"   or  range <portlist> src|dst port <start> <min> <max> <inc>",
@@ -164,6 +169,7 @@ range_cmd(int argc, char **argv)
 	struct pg_ipaddr ip;
 	char *what, *p;
 	const char *val;
+    port_info_t *info = &pktgen.info[0];
 
 	m = cli_mapping(range_map, argc, argv);
 	if (!m)
@@ -175,12 +181,20 @@ range_cmd(int argc, char **argv)
 	val = (const char*)argv[5];
 	switch(m->index) {
 		case 20:
-			foreach_port(portlist,
-			     range_set_dest_mac(info, what, rte_ether_aton(val, NULL)));
+            if (strlen(val) == 1 && strcmp("mode", what) == 0) {
+                info->range.dst_mac_mode = atoi(val);
+            } else {
+                foreach_port(portlist,
+                     range_set_dest_mac(info, what, rte_ether_aton(val, NULL)));
+            }
 			break;
 		case 21:
-			foreach_port(portlist,
-			     range_set_src_mac(info, what, rte_ether_aton(val, NULL)));
+            if (strlen(val) == 1 && strcmp("mode", what) == 0) {
+                info->range.src_mac_mode = atoi(val);
+            } else {
+                foreach_port(portlist,
+                     range_set_src_mac(info, what, rte_ether_aton(val, NULL)));
+            }
 			break;
 		case 22:
 			foreach_port(portlist,
@@ -189,6 +203,7 @@ range_cmd(int argc, char **argv)
 			     range_set_dest_mac(info, "max", rte_ether_aton((const char *)argv[6], NULL));
 			     range_set_dest_mac(info, "inc", rte_ether_aton((const char *)argv[7], NULL))
 				);
+            info->range.dst_mac_mode = U_INCR;
 			break;
 		case 23:
 			foreach_port(portlist,
@@ -197,24 +212,33 @@ range_cmd(int argc, char **argv)
 			     range_set_src_mac(info, "max", rte_ether_aton((const char *)argv[6], NULL));
 			     range_set_src_mac(info, "inc", rte_ether_aton((const char *)argv[7], NULL))
 				);
+            info->range.src_mac_mode = U_INCR;
 			break;
 		case 30:
 			/* Remove the /XX mask value is supplied */
 			p = strchr(argv[4], '/');
 			if (p)
 				*p = '\0';
-			rte_atoip(val, PG_IPADDR_V4, &ip, sizeof(ip));
-			foreach_port(portlist,
-			     range_set_dst_ip(info, what, &ip));
+            if (strlen(val) == 1 && strcmp("mode", what) == 0) {
+                info->range.dst_ip_mode = atoi(val);
+            } else {
+                rte_atoip(val, PG_IPADDR_V4, &ip, sizeof(ip));
+                foreach_port(portlist,
+                     range_set_dst_ip(info, what, &ip));
+            }
 			break;
 		case 31:
 			/* Remove the /XX mask value is supplied */
 			p = strchr(argv[4], '/');
 			if (p)
 				*p = '\0';
-			rte_atoip(argv[5], PG_IPADDR_V4, &ip, sizeof(ip));
-			foreach_port(portlist,
-			     range_set_src_ip(info, what, &ip));
+            if (strlen(val) == 1 && strcmp("mode", what) == 0) {
+                info->range.src_ip_mode = atoi(val);
+            } else {
+                rte_atoip(val, PG_IPADDR_V4, &ip, sizeof(ip));
+                foreach_port(portlist,
+                     range_set_src_ip(info, what, &ip));
+            }
 			break;
 		case 32:
 			foreach_port(portlist,
@@ -227,6 +251,7 @@ range_cmd(int argc, char **argv)
 				rte_atoip(argv[7], PG_IPADDR_V4, &ip, sizeof(ip));
 			    range_set_dst_ip(info, (char *)(uintptr_t)"inc", &ip)
 				);
+            info->range.dst_ip_mode = U_INCR;
 			break;
 		case 33:
 			foreach_port(portlist,
@@ -239,6 +264,7 @@ range_cmd(int argc, char **argv)
 				rte_atoip(argv[7], PG_IPADDR_V4, &ip, sizeof(ip));
 			    range_set_src_ip(info, (char *)(uintptr_t)"inc", &ip)
 				);
+            info->range.src_ip_mode = U_INCR;
 			break;
 		case 40:
 			foreach_port(portlist,
@@ -259,6 +285,7 @@ range_cmd(int argc, char **argv)
 					range_set_dst_port(info, (char *)(uintptr_t)"max", atoi(argv[6]));
 					range_set_dst_port(info, (char *)(uintptr_t)"inc", atoi(argv[7]))
 					);
+            info->range.dst_port_mode = U_INCR;
 			break;
 		case 53:
 			foreach_port(portlist,
@@ -267,6 +294,7 @@ range_cmd(int argc, char **argv)
 					range_set_src_port(info, (char *)(uintptr_t)"max", atoi(argv[6]));
 					range_set_src_port(info, (char *)(uintptr_t)"inc", atoi(argv[7]))
 					);
+            info->range.src_port_mode = U_INCR;
 			break;
 		case 60:
 			foreach_port(portlist,
@@ -328,6 +356,12 @@ range_cmd(int argc, char **argv)
 				range_set_tos_id(info, (char *)(uintptr_t)"inc", atoi(argv[6]))
 				);
 			break;
+        case 200:
+            if (argc == 5 && strlen(argv[4]) == 1) {
+                port_info_t *info = &pktgen.info[0];
+                info->range.modify_pcap = atoi(argv[4]);
+            }
+            break;
 		default:
 			return cli_cmd_error("Range command error", "Range", argc, argv);
 	}

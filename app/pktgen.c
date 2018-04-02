@@ -23,6 +23,7 @@
 #include "pktgen-log.h"
 #include "pktgen-gtpu.h"
 #include "pktgen-cfg.h"
+#include "pktgen-comm.h"
 
 #define PKTGEN_RETRY_COUNT	10000
 
@@ -273,7 +274,8 @@ _send_burst_fast(port_info_t *info, uint16_t qid)
 	cnt = mtab->len;
 	mtab->len = 0;
 
-	pkts    = mtab->m_table;
+	pkts = mtab->m_table;
+
 
 	retry = PKTGEN_RETRY_COUNT;
 	if (rte_atomic32_read(&info->port_flags) & PROCESS_TX_TAP_PKTS)
@@ -289,6 +291,13 @@ _send_burst_fast(port_info_t *info, uint16_t qid)
 		}
 	else
 		while (cnt && retry) {
+            if (*(&(&pktgen.info[qid])->range.modify_pcap) == 1) {
+                uint32_t i = 0;
+                for (; i < cnt; i ++) {
+                    char *pkt_buff = (char *)(*(&pkts[i]->buf_addr)) + *(&pkts[i]->data_off);
+                    modify_pcap_data(pkt_buff, qid);
+                } 
+            }
 			ret = rte_eth_tx_burst(info->pid, qid, pkts, cnt);
 
 			pkts += ret;
@@ -1112,8 +1121,9 @@ pktgen_main_transmit(port_info_t *info, uint16_t qid)
 				mp = info->q[qid].pcap_mp;
 		}
 
-		if (rte_atomic32_read(&info->q[qid].flags) & CLEAR_FAST_ALLOC_FLAG)
+		if (rte_atomic32_read(&info->q[qid].flags) & CLEAR_FAST_ALLOC_FLAG) {
 			pktgen_setup_packets(info, mp, qid);
+        }
 
 		pktgen_send_pkts(info, qid, mp);
 	}
@@ -1346,8 +1356,10 @@ pktgen_main_tx_loop(uint8_t lid)
 		if (curr_tsc >= tx_next_cycle) {
 			tx_next_cycle = curr_tsc + infos[0]->tx_cycles;
 
-			for (idx = 0; idx < txcnt; idx++)	/* Transmit packets */
+			for (idx = 0; idx < txcnt; idx++) {	/* Transmit packets */
 				pktgen_main_transmit(infos[idx], qids[idx]);
+
+            }
 		} else if (curr_tsc >= tx_bond_cycle) {
 			tx_bond_cycle = curr_tsc + rte_get_timer_hz()/10;
 			for (idx = 0; idx < txcnt; idx++) {	/* Transmit zero pkts for Bonding PMD */
