@@ -274,7 +274,7 @@ pktgen_print_range(void)
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "          mode");
 
 	row++;
-	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "modify pcap switch");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "   pcap.modify");
 
 	row++;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "vlan.id / inc");

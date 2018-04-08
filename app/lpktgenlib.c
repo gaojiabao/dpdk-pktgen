@@ -1305,17 +1305,27 @@ range_dst_mac(lua_State *L)
 {
 	portlist_t portlist;
 	struct ether_addr mac;
+    char      *type;
+    char      *val;
 
 	switch (lua_gettop(L) ) {
 	default: return luaL_error(L, "dst_mac, wrong number of arguments");
 	case 3:
 		break;
 	}
-	rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
-	rte_ether_aton(luaL_checkstring(L, 3), &mac);
+    rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
+    type = (char *)luaL_checkstring(L, 2);
+    val = (char *)luaL_checkstring(L, 3);
 
-	foreach_port(portlist,
-	             range_set_dest_mac(info, luaL_checkstring(L, 2), &mac) );
+    if (strcmp(type, "mode") == 0 && strlen(val) == 1) {
+        port_info_t *info = &pktgen.info[0];
+        info->range.dst_mac_mode = atoi(val);
+        } else {
+            rte_ether_aton(luaL_checkstring(L, 3), &mac);
+
+            foreach_port(portlist, 
+                         range_set_dest_mac(info, luaL_checkstring(L, 2), &mac) );
+    }
 
 	pktgen_update_display();
 	return 0;
@@ -1338,17 +1348,27 @@ range_src_mac(lua_State *L)
 {
 	portlist_t portlist;
 	struct ether_addr mac;
+    char      *type;
+    char      *val;
 
 	switch (lua_gettop(L) ) {
 	default: return luaL_error(L, "src_mac, wrong number of arguments");
 	case 3:
 		break;
 	}
-	rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
-	rte_ether_aton(luaL_checkstring(L, 3), &mac);
+    rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
+    type = (char *)luaL_checkstring(L, 2);
+    val = (char *)luaL_checkstring(L, 3);
 
-	foreach_port(portlist,
-	             range_set_src_mac(info, luaL_checkstring(L, 2), &mac) );
+    if (strcmp(type, "mode") == 0 && strlen(val) == 1) { 
+        port_info_t *info = &pktgen.info[0];
+        info->range.src_mac_mode = atoi(val);
+    } else {
+        rte_ether_aton(val, &mac);
+
+        foreach_port(portlist,
+                     range_set_src_mac(info, luaL_checkstring(L, 2), &mac) );
+    }
 
 	pktgen_update_display();
 	return 0;
@@ -1371,20 +1391,28 @@ range_dst_ip(lua_State *L)
 {
 	portlist_t portlist;
 	struct pg_ipaddr ipaddr;
-	char      *type;
+    char      *type;
+    char      *val;
 
 	switch (lua_gettop(L) ) {
 	default: return luaL_error(L, "dst_ip, wrong number of arguments");
 	case 3:
 		break;
 	}
-	rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
-	rte_atoip(luaL_checkstring(L, 3), PG_IPADDR_V4,
-			  &ipaddr, sizeof(struct pg_ipaddr));
+    rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
+    type = (char *)luaL_checkstring(L, 2);
+    val = (char *)luaL_checkstring(L, 3);
 
-	type = (char *)luaL_checkstring(L, 2);
-	foreach_port(portlist,
-	             range_set_dst_ip(info, type, &ipaddr) );
+    if (strcmp(type, "mode") == 0 && strlen(val) == 1) {
+        port_info_t *info = &pktgen.info[0];
+        info->range.dst_ip_mode = atoi(val);
+    } else {
+        rte_atoip(luaL_checkstring(L, 3), PG_IPADDR_V4,
+                  &ipaddr, sizeof(struct pg_ipaddr));
+
+                  foreach_port(portlist,
+                               range_set_dst_ip(info, type, &ipaddr) );
+    }
 
 	pktgen_update_display();
 	return 0;
@@ -1408,6 +1436,7 @@ range_src_ip(lua_State *L)
 	portlist_t portlist;
 	struct pg_ipaddr ipaddr;
 	char      *type;
+    char      *val;
 
 	switch (lua_gettop(L) ) {
 	default: return luaL_error(L, "src_ip, wrong number of arguments");
@@ -1415,12 +1444,19 @@ range_src_ip(lua_State *L)
 		break;
 	}
 	rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
-	rte_atoip(luaL_checkstring(L, 3), PG_IPADDR_V4,
-			  &ipaddr, sizeof(ipaddr));
+    type = (char *)luaL_checkstring(L, 2);
+    val = (char *)luaL_checkstring(L, 3);
 
-	type = (char *)luaL_checkstring(L, 2);
-	foreach_port(portlist,
-	             range_set_src_ip(info, type, &ipaddr) );
+    if (strcmp(type, "mode") == 0 && strlen(val) == 1) {
+        port_info_t *info = &pktgen.info[0];
+        info->range.src_ip_mode = atoi(val);
+    } else {
+        rte_atoip(val, PG_IPADDR_V4, 
+                     &ipaddr, sizeof(ipaddr));
+
+        foreach_port(portlist,
+                     range_set_src_ip(info, type, &ipaddr) );
+    }
 
 	pktgen_update_display();
 	return 0;
@@ -1471,6 +1507,72 @@ range_dst_port(lua_State *L)
  */
 
 static int
+range_src_port(lua_State *L)
+{
+	portlist_t portlist;
+
+	switch (lua_gettop(L) ) {
+	default: return luaL_error(L, "src_port, wrong number of arguments");
+	case 3:
+		break;
+	}
+	rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
+
+	foreach_port(portlist,
+		     range_set_src_port(info, (char *)luaL_checkstring(L, 2),
+					 luaL_checkinteger(L, 3)));
+
+	pktgen_update_display();
+	return 0;
+}
+
+/**************************************************************************//**
+ *
+ * range_modify_pcap - Set modify-pcap switch.
+ *
+ * DESCRIPTION
+ * Set modify-pcap switch.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+static int
+range_modify_pcap(lua_State *L)
+{
+    char      *type;
+    char      *val;
+
+    switch (lua_gettop(L) ) {
+    default: return luaL_error(L, "modify_pcap, wrong number of arguments");
+    case 3:
+        break;
+    }
+
+    type = (char *)luaL_checkstring(L, 2);
+    val = (char *)luaL_checkstring(L, 3);
+   
+    if (strcmp(type, "mode") == 0 && strlen(val) == 1) {
+        port_info_t *info = &pktgen.info[0];
+        info->range.modify_pcap = atoi(val);
+    }
+
+    return 0;
+}
+
+/**************************************************************************//**
+ *
+ * range_ip_proto - Set ip protocal in the range data.
+ *
+ * DESCRIPTION
+ * Set ip protocal in the range data.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+static int
 range_ip_proto(lua_State *L)
 {
 	portlist_t portlist;
@@ -1486,38 +1588,6 @@ range_ip_proto(lua_State *L)
 	ip = luaL_checkstring(L, 2);
 	foreach_port(portlist,
 		     range_set_proto(info, ip));
-
-	pktgen_update_display();
-	return 0;
-}
-
-/**************************************************************************//**
- *
- * range_src_port - Set the source port value in the range data.
- *
- * DESCRIPTION
- * Set the source port value in the range data.
- *
- * RETURNS: N/A
- *
- * SEE ALSO:
- */
-
-static int
-range_src_port(lua_State *L)
-{
-	portlist_t portlist;
-
-	switch (lua_gettop(L) ) {
-	default: return luaL_error(L, "src_port, wrong number of arguments");
-	case 3:
-		break;
-	}
-	rte_parse_portlist(luaL_checkstring(L, 1), &portlist);
-
-	foreach_port(portlist,
-		     range_set_src_port(info, (char *)luaL_checkstring(L, 2),
-					 luaL_checkinteger(L, 3)));
 
 	pktgen_update_display();
 	return 0;
@@ -3409,6 +3479,7 @@ static const luaL_Reg pktgenlib_range[] = {
 	{"qinqids",       range_qinqids},		/* Set the Q-in-Q ID values */
 	{"gre_key",       range_gre_key},		/* Set the GRE key */
 	{"pkt_size",      range_pkt_size},		/* the packet size for a range port */
+    {"modify_pcap",   range_modify_pcap},    /* Set modify-pcap switch */
 	{NULL, NULL}
 };
 

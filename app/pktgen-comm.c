@@ -25,7 +25,8 @@ condition_info c_info;
  * SEE ALSO:
  */
 
-static int get_rand_num(void)
+static int 
+get_rand_num(void)
 {
     struct timeval tp;
     gettimeofday(&tp, NULL);
@@ -46,7 +47,8 @@ static int get_rand_num(void)
  * SEE ALSO:
  */
 
-void show_pkt_content(char* pkt_buff, int pkt_len)
+void 
+show_pkt_content(char* pkt_buff, int pkt_len)
 {
     if (pkt_buff == NULL || pkt_len <= 0) {
         printf("Packet error\n");
@@ -75,7 +77,8 @@ void show_pkt_content(char* pkt_buff, int pkt_len)
  * SEE ALSO:
  */
 
-static uint32_t rand_ip_addr(uint32_t src_or_dst)
+static uint32_t 
+rand_ip_addr(uint32_t src_or_dst)
 {
     if (src_or_dst == U_SRC)
         return IPv4(100, get_rand_num() % 256, get_rand_num() % 256, get_rand_num() % 255 + 1);
@@ -95,7 +98,8 @@ static uint32_t rand_ip_addr(uint32_t src_or_dst)
  * SEE ALSO:
  */
 
-static void record_target_info(uint32_t t_sip, uint32_t t_dip) 
+static void 
+record_target_info(uint32_t t_sip, uint32_t t_dip) 
 {
     t_info.sip = t_sip;
     t_info.dip = t_dip;
@@ -113,7 +117,8 @@ static void record_target_info(uint32_t t_sip, uint32_t t_dip)
  * SEE ALSO:
  */
 
-static void init_condition_info(range_info_t *range)
+static void 
+init_condition_info(range_info_t *range)
 {
     // src ip
     if (unlikely(range->src_ip_mode == U_INCR)) { 
@@ -218,7 +223,8 @@ static void init_condition_info(range_info_t *range)
  * SEE ALSO:
  */
 
-static uint8_t is_pkt_need_modify(uint32_t sip, uint32_t dip)
+static uint8_t 
+is_pkt_need_modify(uint32_t sip, uint32_t dip)
 {
     uint8_t ret = 0;
     if (sip == t_info.sip && dip == t_info.dip)
@@ -241,7 +247,8 @@ static uint8_t is_pkt_need_modify(uint32_t sip, uint32_t dip)
  * SEE ALSO:
  */
 
-static void modify_pkt_mac(pkt_hdr_t *hdr, uint8_t direction)
+static void 
+modify_pkt_mac(pkt_hdr_t *hdr, uint8_t direction)
 {
     if (direction == U_FORWARD) {
         if (c_info.smac)
@@ -268,7 +275,8 @@ static void modify_pkt_mac(pkt_hdr_t *hdr, uint8_t direction)
  * SEE ALSO:
  */
 
-static void modify_pkt_ip(pkt_hdr_t *hdr, uint8_t direction)
+static void 
+modify_pkt_ip(pkt_hdr_t *hdr, uint8_t direction)
 {
     if (direction == U_FORWARD) {
         if (c_info.sip)
@@ -295,7 +303,8 @@ static void modify_pkt_ip(pkt_hdr_t *hdr, uint8_t direction)
  * SEE ALSO:
  */
 
-static void modify_pkt_port(pkt_hdr_t *hdr, uint8_t direction, uint8_t proto)
+static void 
+modify_pkt_port(pkt_hdr_t *hdr, uint8_t direction, uint8_t proto)
 {
     if (direction == U_FORWARD) { 
         switch(proto) {
@@ -312,7 +321,7 @@ static void modify_pkt_port(pkt_hdr_t *hdr, uint8_t direction, uint8_t proto)
                 hdr->u.uip.udp.dport = c_info.dport;
             break;
         }
-    } else if (direction == U_REVERSE) { // reverse
+    } else if (direction == U_REVERSE) {
         switch(proto) {
         case PG_IPPROTO_TCP:
             if (c_info.dport)
@@ -342,7 +351,8 @@ static void modify_pkt_port(pkt_hdr_t *hdr, uint8_t direction, uint8_t proto)
  * SEE ALSO:
  */
 
-void modify_pcap_data(char* pkt_buff, uint16_t pid)
+void 
+modify_pcap_data(char* pkt_buff, uint16_t pid)
 {
     pkt_hdr_t   *hdr;
     hdr = (pkt_hdr_t *)&pkt_buff[pid];
@@ -362,7 +372,7 @@ void modify_pcap_data(char* pkt_buff, uint16_t pid)
     if (hdr->eth.ether_type == ntohs(ETHER_TYPE_IPv4)) {
         uint8_t l4_proto = hdr->u.ipv4.proto;
         if (l4_proto == range->ip_proto) {
-            if (pkt_idx % pcap->pkt_count == 0 ) {
+            if (pkt_idx % pcap->pkt_count == 0) {
                 if (record_flag) {
                     record_target_info(hdr->u.ipv4.src, hdr->u.ipv4.dst); 
                     record_flag --;
